@@ -1,0 +1,14 @@
+{
+  "id": "com.iptv.m3u.lg",
+  "version": "1.0.0",
+  "vendor": "IPTV LG",
+  "type": "web",
+  "main": "index.html",
+  "title": "M3U IPTV",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#0b0e14",
+  "iconColor": "#0b0e14",
+  "disableBackHistoryAPI": true,
+  "handlesRelaunch": false
+}

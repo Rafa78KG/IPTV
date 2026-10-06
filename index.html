@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M3U IPTV — LG</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
+<style>
+  :root {
+    --bg: #07080d;
+    --panel: rgba(16, 20, 30, .92);
+    --panel2: #1b2333;
+    --line: rgba(255,255,255,.08);
+    --text: #f4f7fb;
+    --muted: #93a0b5;
+    --accent: #5b8cff;
+    --accent2: #6d5efc;
+    --ok: #3ee0a0;
+    --warn: #ffc857;
+    --focus: #ffe08a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; color: var(--text); overflow: hidden;
+    font-family: "Segoe UI", "LG Smart UI", sans-serif;
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(109,94,252,.35), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(61,139,253,.22), transparent 55%),
+      var(--bg); }
+  button, input, select { font-family: inherit; }
+  #app { display: grid; grid-template-columns: 430px 1fr; height: 100%; }
+  #side {
+    background: var(--panel); backdrop-filter: blur(16px);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; min-width: 0;
+    box-shadow: 12px 0 40px rgba(0,0,0,.25);
+  }
+  header { padding: 22px 20px 12px; display: flex; align-items: center; gap: 14px; }
+  .logo { width: 46px; height: 46px; border-radius: 14px;
+    background: linear-gradient(145deg, #7aa2ff, #6d5efc 55%, #3d8bfd);
+    display: grid; place-items: center; font-weight: 800; letter-spacing: .5px;
+    box-shadow: 0 8px 20px rgba(91,140,255,.35); }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.2px; }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 16px 12px; }
+  .tools button, .search input, .modal button, .modal input, .modal select {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; }
+  .tools button { padding: 11px 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .tools button:hover { background: #243044; }
+  .search { padding: 0 16px 12px; position: relative; }
+  .search input, .modal input, .modal select { width: 100%; padding: 13px 14px; font-size: 16px; outline: none; }
+  .search input { padding-left: 40px; background: #141b28 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%2393a0b5' stroke-width='2'><circle cx='8' cy='8' r='6'/><path d='M13 13l4 4'/></svg>") 12px 50% no-repeat; }
+  label.fld { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 12px; letter-spacing: .4px; text-transform: uppercase; }
+  .groups { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 12px; scrollbar-width: none; }
+  .groups::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; background: #151c29;
+    border: 1px solid var(--line); color: var(--text); font-size: 13px; cursor: pointer; }
+  .chip.focus { background: linear-gradient(90deg, #315fe8, #6d5efc); border-color: transparent; }
+  #list { flex: 1; overflow-y: auto; padding: 0 10px 18px; }
+  #list::-webkit-scrollbar { width: 8px; }
+  #list::-webkit-scrollbar-thumb { background: #2c384d; border-radius: 8px; }
+  .ch { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 12px; margin: 4px 4px; border-radius: 14px; border: 1px solid transparent; cursor: pointer;
+    background: transparent; transition: background .15s ease; }
+  .ch .num { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; min-width: 28px; text-align: right; }
+  .ch .name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch .grp { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .logoimg, .ph { width: 52px; height: 40px; border-radius: 10px; object-fit: contain; background: #0e1420; border: 1px solid var(--line); }
+  .ph { display: grid; place-items: center; color: #b9c6da; font-size: 11px; font-weight: 700; }
+  .star { color: var(--warn); font-size: 18px; }
+  .ch.focus, button.focus, input.focus, select.focus {
+    border-color: var(--focus) !important; box-shadow: 0 0 0 3px rgba(255,224,138,.22); }
+  .ch.focus { background: linear-gradient(90deg, rgba(91,140,255,.22), rgba(109,94,252,.08)); }
+  .ch.active { background: rgba(255,255,255,.04); }
+  .ch.active .name { color: #fff; }
+  #stage { position: relative; background: #000; display: flex; flex-direction: column; min-width: 0; }
+  video { width: 100%; height: 100%; background: #000; object-fit: contain; flex: 1; }
+  #osd { position: absolute; left: 18px; right: 18px; bottom: 18px; padding: 18px 20px;
+    background: linear-gradient(180deg, rgba(12,16,24,.2), rgba(10,12,18,.82));
+    border: 1px solid rgba(255,255,255,.08); border-radius: 18px; backdrop-filter: blur(10px); display: none; }
+  #osd.show { display: block; }
+  #now { font-size: 30px; font-weight: 750; letter-spacing: -.3px; }
+  #nowmeta { color: #c9d3e2; margin-top: 4px; font-size: 15px; }
+  .live { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px;
+    background: #e23b4a; color: white; font-size: 11px; font-weight: 800; letter-spacing: .6px; vertical-align: 3px; }
+  #status { position: absolute; top: 18px; right: 18px; background: rgba(10,14,22,.62);
+    border: 1px solid rgba(255,255,255,.08); padding: 8px 12px; border-radius: 999px; font-size: 13px; color: #d5deea; backdrop-filter: blur(8px); }
+  #help { position: absolute; top: 18px; left: 18px; color: #d5deea; font-size: 13px;
+    background: rgba(10,14,22,.55); border: 1px solid rgba(255,255,255,.08);
+    padding: 8px 12px; border-radius: 999px; backdrop-filter: blur(8px); }
+  .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 48px;
+    background: radial-gradient(500px 280px at 50% 40%, rgba(91,140,255,.18), transparent 70%); }
+  .empty .mark { width: 74px; height: 74px; margin: 0 auto 16px; border-radius: 22px;
+    display: grid; place-items: center; font-weight: 800; font-size: 22px;
+    background: linear-gradient(145deg, #7aa2ff, #6d5efc); box-shadow: 0 16px 40px rgba(91,140,255,.35); }
+  .empty h2 { margin: 0 0 8px; font-size: 36px; letter-spacing: -.4px; }
+  .empty p { color: var(--muted); max-width: 560px; line-height: 1.5; }
+  .modal { position: fixed; inset: 0; background: rgba(4,6,10,.72); display: none; place-items: center; z-index: 5; backdrop-filter: blur(6px); }
+  .modal.show { display: grid; }
+  .card { width: min(760px, 92vw); max-height: 90vh; overflow: auto;
+    background: linear-gradient(180deg, #171e2c, #121722);
+    border: 1px solid rgba(255,255,255,.1); border-radius: 22px; padding: 26px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .card h2 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.3px; }
+  .card p { color: var(--muted); margin: 0 0 8px; }
+  .row { display: flex; gap: 10px; margin-top: 18px; }
+  .row button { padding: 13px 18px; border-radius: 12px; border: 1px solid transparent; color: white; font-size: 16px; font-weight: 700; cursor: pointer;
+    background: linear-gradient(90deg, #3d74f5, #6d5efc); }
+  .row button.ghost { background: #1c2536; border-color: var(--line); font-weight: 600; }
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: #1b2434; border: 1px solid rgba(255,255,255,.1); padding: 12px 18px; border-radius: 14px;
+    display: none; z-index: 9; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <header>
+      <div class="logo">TV</div>
+      <div>
+        <h1>M3U IPTV</h1>
+        <div class="sub">Player para TV LG</div>
+      </div>
+    </header>
+    <div class="tools">
+      <button id="btnUrl" data-nav>Conta</button>
+      <button id="btnAdd" data-nav>Canal</button>
+      <button id="btnFav" data-nav>Favoritos</button>
+      <button id="btnReload" data-nav>Recarregar</button>
+    </div>
+    <div class="search"><input id="q" data-nav placeholder="Buscar canal" /></div>
+    <div class="groups" id="groups"></div>
+    <div id="list"></div>
+  </aside>
+  <main id="stage">
+    <video id="video" autoplay playsinline></video>
+    <div class="empty" id="empty">
+      <div>
+        <div class="mark">TV</div>
+        <h2>Sua grade, na tela grande</h2>
+        <p>Abra <b>Conta</b> (host, usuário, senha ou link M3U) ou <b>Canal</b> para adicionar um stream manual. Setas, OK para tocar, Voltar fecha janelas.</p>
+      </div>
+    </div>
+    <div id="help">↑↓ canais · OK tocar · vermelho favorito · verde busca</div>
+    <div id="status">parado</div>
+    <div id="osd">
+      <div id="now"><span class="live">AO VIVO</span>—</div>
+      <div id="nowmeta"></div>
+    </div>
+  </main>
+</div>
+<div class="modal" id="modal">
+  <div class="card">
+    <h2>Entrar no painel</h2>
+    <p>Preencha o painel ou cole o link da playlist. Se os dois estiverem preenchidos, o link da playlist é usado.</p>
+    <label class="fld" for="plist">Link da playlist (M3U)</label>
+    <input id="plist" data-nav placeholder="https://servidor.com/lista.m3u" autocomplete="off" />
+    <label class="fld" for="host">Host (servidor)</label>
+    <input id="host" data-nav placeholder="http://servidor.com:8080" autocomplete="off" />
+    <label class="fld" for="user">Usuário</label>
+    <input id="user" data-nav placeholder="usuario" autocomplete="off" />
+    <label class="fld" for="pass">Senha</label>
+    <input id="pass" data-nav type="password" placeholder="senha" autocomplete="off" />
+    <label class="fld" for="output">Formato</label>
+    <select id="output" data-nav>
+      <option value="m3u8">HLS (m3u8) — recomendado na TV</option>
+      <option value="ts">MPEG-TS</option>
+    </select>
+    <div class="row">
+      <button id="btnLoad" data-nav>Entrar</button>
+      <button id="btnCancel" class="ghost" data-nav>Cancelar</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="modalAdd">
+  <div class="card">
+    <h2>Adicionar canal</h2>
+    <p>Canal manual, salvo nesta TV. Informe nome e URL do stream.</p>
+    <label class="fld" for="chName">Nome</label>
+    <input id="chName" data-nav placeholder="Nome do canal" autocomplete="off" />
+    <label class="fld" for="chGroup">Grupo</label>
+    <input id="chGroup" data-nav placeholder="Manual" autocomplete="off" />
+    <label class="fld" for="chUrl">URL do stream</label>
+    <input id="chUrl" data-nav placeholder="https://servidor.com/live/canal.m3u8" autocomplete="off" />
+    <div class="row">
+      <button id="btnSaveCh" data-nav>Adicionar</button>
+      <button id="btnCancelAdd" class="ghost" data-nav>Cancelar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const video = $("#video");
+const listEl = $("#list");
+const groupsEl = $("#groups");
+let channels = [];
+let filtered = [];
+let group = "Todos";
+let favOnly = false;
+let focusIdx = 0;
+let hls = null;
+let mpeg = null;
+let osdTimer = null;
+const favs = new Set(JSON.parse(localStorage.getItem("favs") || "[]"));
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.style.display = "none", 2400);
+}
+function saveFavs() { localStorage.setItem("favs", JSON.stringify([...favs])); }
+
+function parseM3U(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let cur = null;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("#EXTINF")) {
+      const name = (line.split(",").slice(1).join(",") || "Canal").trim();
+      const grp = (line.match(/group-title="([^"]*)"/i) || [])[1] || "Geral";
+      const logo = (line.match(/tvg-logo="([^"]*)"/i) || [])[1] || "";
+      const id = (line.match(/tvg-id="([^"]*)"/i) || [])[1] || "";
+      cur = { name, group: grp || "Geral", logo, id, url: "" };
+    } else if (line.startsWith("#")) {
+      continue;
+    } else if (cur) {
+      cur.url = line;
+      out.push(cur);
+      cur = null;
+    } else if (/^https?:\/\//i.test(line)) {
+      out.push({ name: "Canal " + (out.length + 1), group: "Geral", logo: "", id: "", url: line });
+    }
+  }
+  return out;
+}
+
+function renderGroups() {
+  const set = ["Todos", "Favoritos", ...new Set(channels.map(c => c.group))];
+  groupsEl.innerHTML = "";
+  set.forEach(g => {
+    const b = document.createElement("button");
+    b.className = "chip" + (g === (favOnly ? "Favoritos" : group) ? " focus" : "");
+    b.textContent = g;
+    b.dataset.nav = "1";
+    b.onclick = () => { favOnly = g === "Favoritos"; group = g === "Favoritos" ? "Todos" : g; applyFilter(); };
+    groupsEl.appendChild(b);
+  });
+}
+
+function applyFilter() {
+  const q = $("#q").value.trim().toLowerCase();
+  filtered = channels.filter(c => {
+    if (favOnly && !favs.has(c.url)) return false;
+    if (!favOnly && group !== "Todos" && c.group !== group) return false;
+    if (q && !c.name.toLowerCase().includes(q) && !c.group.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  focusIdx = Math.min(focusIdx, Math.max(0, filtered.length - 1));
+  renderList();
+  renderGroups();
+}
+
+function renderList() {
+  listEl.innerHTML = "";
+  filtered.forEach((c, i) => {
+    const el = document.createElement("div");
+    el.className = "ch" + (i === focusIdx ? " focus" : "") + (c.url === video.dataset.url ? " active" : "");
+    el.dataset.i = i;
+    const img = c.logo
+      ? `<img class="logoimg" src="${c.logo}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:'TV'}))">`
+      : `<div class="ph">TV</div>`;
+    el.innerHTML = `${img}<div><div class="name">${escapeHtml(c.name)}</div><div class="grp">${escapeHtml(c.group)}</div></div><div>${favs.has(c.url) ? '<span class="star">★</span>' : '<span class="num">' + (i + 1) + "</span>"}</div>`;
+    el.onclick = () => { focusIdx = i; play(c); renderList(); };
+    listEl.appendChild(el);
+  });
+  const f = listEl.querySelector(".ch.focus");
+  if (f) f.scrollIntoView({ block: "nearest" });
+  if (!filtered.length) listEl.innerHTML = '<div style="padding:18px;color:#8b98ad">Nenhum canal. Carregue uma playlist.</div>';
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[m])); }
+
+function stopPlayers() {
+  if (hls) { hls.destroy(); hls = null; }
+  if (mpeg) { try { mpeg.pause(); mpeg.unload(); mpeg.detachMediaElement(); mpeg.destroy(); } catch (e) {} mpeg = null; }
+  video.removeAttribute("src");
+  video.load();
+}
+
+function play(c) {
+  stopPlayers();
+  video.dataset.url = c.url;
+  $("#empty").style.display = "none";
+  $("#now").innerHTML = '<span class="live">AO VIVO</span>' + escapeHtml(c.name);
+  $("#nowmeta").textContent = c.group + (c.id ? " · " + c.id : "");
+  $("#osd").classList.add("show");
+  clearTimeout(osdTimer);
+  osdTimer = setTimeout(() => $("#osd").classList.remove("show"), 5000);
+  $("#status").textContent = "carregando…";
+  const url = c.url;
+  const isHls = /\.m3u8(\?|$)/i.test(url) || /mpegurl/i.test(url);
+  const isTs = /\.ts(\?|$)/i.test(url);
+  if (isTs && window.mpegts && mpegts.isSupported()) {
+    mpeg = mpegts.createPlayer({ type: "mse", isLive: true, url });
+    mpeg.attachMediaElement(video);
+    mpeg.load();
+    mpeg.play();
+  } else if (window.Hls && Hls.isSupported() && (isHls || !isTs)) {
+    hls = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) {
+        $("#status").textContent = "erro no stream";
+        toast("Falha ao reproduzir. O servidor pode bloquear o navegador (CORS) ou o formato não é HLS.");
+      }
+    });
+  } else {
+    video.src = url;
+    video.play().catch(() => {});
+  }
+  video.onplaying = () => $("#status").textContent = "ao vivo";
+  video.onwaiting = () => $("#status").textContent = "buffer…";
+  video.onerror = () => $("#status").textContent = "erro";
+  localStorage.setItem("lastChannel", url);
+}
+
+function creds() {
+  return {
+    host: $("#host").value.trim(),
+    user: $("#user").value.trim(),
+    pass: $("#pass").value,
+    output: $("#output").value,
+    plist: $("#plist").value.trim()
+  };
+}
+function saveCreds(c) {
+  localStorage.setItem("iptv", JSON.stringify({ host: c.host, user: c.user, pass: c.pass, output: c.output, plist: c.plist }));
+}
+function loadCreds() {
+  try { return JSON.parse(localStorage.getItem("iptv") || "null"); } catch (e) { return null; }
+}
+function manualList() {
+  try { return JSON.parse(localStorage.getItem("manual") || "[]"); } catch (e) { return []; }
+}
+function saveManual(list) { localStorage.setItem("manual", JSON.stringify(list)); }
+function mergeManual(list) {
+  const extra = manualList();
+  const urls = new Set(list.map(c => c.url));
+  extra.forEach(c => { if (c && c.url && !urls.has(c.url)) list.push(c); });
+  return list;
+}
+function normalizeHost(host) {
+  host = host.replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(host)) host = "http://" + host;
+  return host;
+}
+function playlistUrl(c) {
+  const base = normalizeHost(c.host);
+  const q = new URLSearchParams({
+    username: c.user,
+    password: c.pass,
+    type: "m3u_plus",
+    output: c.output || "m3u8"
+  });
+  return base + "/get.php?" + q.toString();
+}
+
+async function loadUrl(url) {
+  url = url.trim();
+  if (!url) return;
+  $("#status").textContent = "baixando lista…";
+  toast("Baixando playlist…");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const text = await res.text();
+  channels = mergeManual(parseM3U(text));
+  if (!channels.length) throw new Error("M3U vazio ou inválido");
+  localStorage.setItem("m3u", url);
+  favOnly = false; group = "Todos"; focusIdx = 0;
+  applyFilter();
+  toast(channels.length + " canais");
+  $("#status").textContent = channels.length + " canais";
+  $("#modal").classList.remove("show");
+  const last = localStorage.getItem("lastChannel");
+  const ch = channels.find(c => c.url === last) || channels[0];
+  if (ch) play(ch);
+}
+
+function move(d) {
+  if (!filtered.length) return;
+  focusIdx = (focusIdx + d + filtered.length) % filtered.length;
+  renderList();
+}
+function toggleFav() {
+  const c = filtered[focusIdx];
+  if (!c) return;
+  if (favs.has(c.url)) favs.delete(c.url); else favs.add(c.url);
+  saveFavs();
+  renderList();
+  toast(favs.has(c.url) ? "Favorito" : "Removido");
+}
+
+function fillLogin() {
+  const c = loadCreds();
+  if (!c) return;
+  $("#host").value = c.host || "";
+  $("#user").value = c.user || "";
+  $("#pass").value = c.pass || "";
+  $("#output").value = c.output || "m3u8";
+  $("#plist").value = c.plist || "";
+}
+function openLogin() {
+  fillLogin();
+  $("#modalAdd").classList.remove("show");
+  $("#modal").classList.add("show");
+  setTimeout(() => $("#plist").focus(), 50);
+}
+function openAdd() {
+  $("#modal").classList.remove("show");
+  $("#modalAdd").classList.add("show");
+  $("#chName").value = "";
+  $("#chGroup").value = "Manual";
+  $("#chUrl").value = "";
+  setTimeout(() => $("#chName").focus(), 50);
+}
+$("#btnUrl").onclick = openLogin;
+$("#btnAdd").onclick = openAdd;
+$("#btnCancel").onclick = () => $("#modal").classList.remove("show");
+$("#btnCancelAdd").onclick = () => $("#modalAdd").classList.remove("show");
+$("#btnSaveCh").onclick = () => {
+  const name = $("#chName").value.trim();
+  const url = $("#chUrl").value.trim();
+  const groupName = $("#chGroup").value.trim() || "Manual";
+  if (!name || !url) { toast("Informe nome e URL"); return; }
+  const list = manualList().filter(c => c.url !== url);
+  list.push({ name, group: groupName, logo: "", id: "", url, manual: true });
+  saveManual(list);
+  channels = mergeManual(channels.filter(c => !c.manual));
+  favOnly = false;
+  group = "Todos";
+  const idx = channels.findIndex(c => c.url === url);
+  focusIdx = idx >= 0 ? idx : 0;
+  applyFilter();
+  $("#modalAdd").classList.remove("show");
+  toast("Canal adicionado");
+  play(channels[idx >= 0 ? idx : 0]);
+};
+$("#btnLoad").onclick = () => {
+  const c = creds();
+  if (!c.plist && (!c.host || !c.user || !c.pass)) { toast("Informe o link da playlist ou host, usuário e senha"); return; }
+  saveCreds(c);
+  const url = c.plist || playlistUrl(c);
+  loadUrl(url).catch(e => toast("Erro: " + e.message));
+};
+$("#btnFav").onclick = () => { favOnly = !favOnly; applyFilter(); };
+$("#btnReload").onclick = () => {
+  const c = loadCreds();
+  if (c && (c.plist || (c.host && c.user && c.pass))) loadUrl(c.plist || playlistUrl(c)).catch(e => toast(e.message));
+  else if (manualList().length) { channels = mergeManual([]); applyFilter(); toast("Canais manuais"); }
+  else toast("Informe a conta ou a playlist");
+};
+$("#q").addEventListener("input", applyFilter);
+
+document.addEventListener("keydown", (e) => {
+  const modal = $("#modal").classList.contains("show") || $("#modalAdd").classList.contains("show");
+  const k = e.keyCode;
+  if (modal && (k === 38 || k === 40)) {
+    const root = $("#modal").classList.contains("show") ? "#modal" : "#modalAdd";
+    const fields = [...document.querySelectorAll(root + " [data-nav]")];
+    const i = fields.indexOf(document.activeElement);
+    if (i >= 0) {
+      e.preventDefault();
+      fields[(i + (k === 40 ? 1 : -1) + fields.length) % fields.length].focus();
+      return;
+    }
+  }
+  if (k === 461 || k === 8 || e.key === "Escape" || e.key === "Backspace" && document.activeElement.tagName !== "INPUT") {
+    if (modal) {
+      $("#modal").classList.remove("show");
+      $("#modalAdd").classList.remove("show");
+      e.preventDefault();
+      return;
+    }
+    if (document.activeElement === $("#q") && $("#q").value) { $("#q").value = ""; applyFilter(); e.preventDefault(); return; }
+  }
+  if (modal) {
+    if (k === 13) {
+      e.preventDefault();
+      if ($("#modalAdd").classList.contains("show")) $("#btnSaveCh").click();
+      else $("#btnLoad").click();
+    }
+    return;
+  }
+  if (document.activeElement === $("#q") && k !== 40 && k !== 38 && k !== 13 && k !== 461) return;
+  if (k === 38) { e.preventDefault(); move(-1); }
+  else if (k === 40) { e.preventDefault(); move(1); }
+  else if (k === 13) { e.preventDefault(); if (filtered[focusIdx]) play(filtered[focusIdx]); }
+  else if (k === 403) { e.preventDefault(); toggleFav(); }
+  else if (k === 404) { e.preventDefault(); $("#q").focus(); }
+  else if (k === 415) video.play();
+  else if (k === 19) video.pause();
+  else if (k === 413) { stopPlayers(); $("#status").textContent = "parado"; }
+  else if (k >= 48 && k <= 57 && document.activeElement.tagName !== "INPUT") {
+    // number zap buffer
+    window._zap = (window._zap || "") + String.fromCharCode(k);
+    clearTimeout(window._zapT);
+    toast("Canal " + window._zap);
+    window._zapT = setTimeout(() => {
+      const n = parseInt(window._zap, 10) - 1;
+      window._zap = "";
+      if (filtered[n]) { focusIdx = n; play(filtered[n]); renderList(); }
+    }, 800);
+  }
+});
+
+const saved = loadCreds();
+if (saved && (saved.plist || (saved.host && saved.user && saved.pass))) {
+  loadUrl(saved.plist || playlistUrl(saved)).catch(() => { $("#status").textContent = "informe a conta"; openLogin(); });
+} else if (manualList().length) {
+  channels = mergeManual([]);
+  applyFilter();
+} else openLogin();
+</script>
+</body>
+</html>
